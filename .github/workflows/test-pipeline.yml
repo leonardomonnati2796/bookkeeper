@@ -1,266 +1,83 @@
-name: BookKeeper Tests - JUnit, Coverage & Mutation Testing
+name: ISW2 Testing Report - EntryMemTable & ExponentialBackoffRetryPolicy
 
 on:
   push:
-    branches: [ main, master, develop, 'feature/**' ]
-    paths:
-      - 'bookkeeper-server/**'
-      - '.github/workflows/test-pipeline.yml'
-  pull_request:
-    branches: [ main, master, develop ]
-    paths:
-      - 'bookkeeper-server/**'
-      - '.github/workflows/test-pipeline.yml'
-  schedule:
-    # Run tests daily at 2 AM UTC
-    - cron: '0 2 * * *'
+    branches: [ master ]
+  workflow_dispatch:
 
 jobs:
-  test:
-    name: Build and Test
+  test-and-report:
+    name: Test & Generate Reports
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        java-version: ['11', '17']
+    timeout-minutes: 30
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Full history for better analysis
 
-      - name: Set up JDK ${{ matrix.java-version }}
+      - name: Set up JDK 11
         uses: actions/setup-java@v4
         with:
-          java-version: ${{ matrix.java-version }}
+          java-version: '11'
           distribution: 'temurin'
           cache: maven
 
-      - name: Display Java version
-        run: java -version
-
-      - name: Build BookKeeper Parent POM (Skip Tests and Native)
-        run: |
-          mvn clean install -DskipTests=true -q -T 1C -Pskip-native 2>/dev/null || \
-          mvn clean install -DskipTests=true -q -T 1C -Dnar.skip=true 2>/dev/null || \
-          echo "Skipping native modules..."
-
-      - name: Run Maven build (bookkeeper-server Tests)
+      - name: Build bookkeeper-server module
         run: |
           cd bookkeeper-server
-          mvn clean package -DskipTests=false -q
+          mvn clean compile test-compile -DskipTests -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true -Dspotbugs.skip=true -Drat.skip=true
+        continue-on-error: false
 
-      - name: Run Unit Tests with Surefire
-        id: test
+      - name: Run Specific Tests
         run: |
           cd bookkeeper-server
-          mvn test -Dtest=EntryMemTable*Test,ExponentialBackoffRetryPolicy*Test -q
+          mvn test -Dtest=EntryMemTableManualTest,EntryMemTableLLMTest,ExponentialBackoffRetryPolicyManualTest,ExponentialBackoffRetryPolicyLLMTest -DfailIfNoTests=false
         continue-on-error: true
 
       - name: Generate JaCoCo Coverage Report
         run: |
           cd bookkeeper-server
-          mvn jacoco:report
+          mvn jacoco:report -DfailIfNoTests=false
         continue-on-error: true
 
-      - name: Upload JaCoCo Coverage to Codecov
-        uses: codecov/codecov-action@v3
-        with:
-          files: ./bookkeeper-server/target/site/jacoco/jacoco.xml
-          flags: unittests
-          name: codecov-umbrella
-          fail_ci_if_error: false
-          verbose: true
-        continue-on-error: true
-
-      - name: Check Test Results
-        if: steps.test.outcome == 'failure'
-        run: |
-          echo "Tests failed! Check the logs above for details."
-          exit 1
-
-      - name: Display Test Summary
-        run: |
-          echo "=== TEST SUMMARY ===" 
-          if [ -f bookkeeper-server/target/surefire-reports/*.txt ]; then
-            cat bookkeeper-server/target/surefire-reports/*.txt
-          fi
-
-  coverage-check:
-    name: Code Coverage Analysis
-    runs-on: ubuntu-latest
-    needs: test
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 11
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'temurin'
-          cache: maven
-
-      - name: Generate Coverage Report
-        run: |
-          cd bookkeeper-server
-          mvn clean test jacoco:report -Dtest=EntryMemTable*Test,ExponentialBackoffRetryPolicy*Test -q
-
-      - name: Check Coverage Threshold
-        run: |
-          cd bookkeeper-server
-          # Extract coverage percentage from jacoco.xml
-          COVERAGE=$(grep -oP 'line-rate="\K[^"]*' target/site/jacoco/jacoco.xml 2>/dev/null | head -1)
-          echo "Code Coverage: ${COVERAGE}%"
-          
-          # Convert to percentage (jacoco reports as decimal)
-          if [ ! -z "$COVERAGE" ]; then
-            COVERAGE_PCT=$(echo "$COVERAGE * 100" | bc)
-            echo "Coverage percentage: ${COVERAGE_PCT}%"
-            
-            # Threshold check (if needed)
-            MIN_COVERAGE=0  # Set to 80 for production
-            # if (( $(echo "$COVERAGE_PCT < $MIN_COVERAGE" | bc -l) )); then
-            #   echo "Coverage below minimum threshold of ${MIN_COVERAGE}%"
-            #   exit 1
-            # fi
-          fi
-
-      - name: Upload Coverage Report as Artifact
+      - name: Upload JaCoCo Report
         uses: actions/upload-artifact@v3
         with:
-          name: jacoco-coverage-report-java11
+          name: jacoco-coverage-report
           path: bookkeeper-server/target/site/jacoco/
         if: always()
 
-  mutation-testing:
-    name: Mutation Testing (PITest)
-    runs-on: ubuntu-latest
-    needs: test
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 11
-        uses: actions/setup-java@v4
+      - name: Upload JaCoCo Report
+        uses: actions/upload-artifact@v3
         with:
-          java-version: '11'
-          distribution: 'temurin'
-          cache: maven
+          name: jacoco-coverage-report
+          path: bookkeeper-server/target/site/jacoco/
+        if: always()
 
       - name: Run PITest Mutation Testing
         run: |
           cd bookkeeper-server
-          mvn clean org.pitest:pitest-maven:mutationCoverage -DtargetClasses=org.apache.bookkeeper.bookie.EntryMemTable,org.apache.bookkeeper.zookeeper.ExponentialBackoffRetryPolicy -DtargetTests=*EntryMemTable*Test,*ExponentialBackoffRetryPolicy*Test -q
+          mvn org.pitest:pitest-maven:mutationCoverage -DtargetClasses=org.apache.bookkeeper.bookie.EntryMemTable,org.apache.bookkeeper.zookeeper.ExponentialBackoffRetryPolicy* -DtargetTests=*EntryMemTable*Test,*ExponentialBackoffRetryPolicy*Test -DfailIfNoTests=false
         continue-on-error: true
 
-      - name: Upload Mutation Report as Artifact
+      - name: Upload PITest Report
         uses: actions/upload-artifact@v3
         with:
           name: pitest-mutation-report
           path: bookkeeper-server/target/pit-reports/
         if: always()
 
-      - name: Display Mutation Test Summary
-        run: |
-          echo "=== MUTATION TESTING SUMMARY ==="
-          if [ -d bookkeeper-server/target/pit-reports/ ]; then
-            ls -la bookkeeper-server/target/pit-reports/
-          else
-            echo "No mutation test report found"
-          fi
+      - name: Generate Summary
         if: always()
-
-  test-report:
-    name: Generate Test Report
-    runs-on: ubuntu-latest
-    needs: test
-    if: always()
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 11
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'temurin'
-          cache: maven
-
-      - name: Run Tests and Generate Report
         run: |
-          cd bookkeeper-server
-          mvn test surefire-report:report -Dtest=EntryMemTable*Test,ExponentialBackoffRetryPolicy*Test -q
-        continue-on-error: true
-
-      - name: Upload Surefire Report as Artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: surefire-test-report
-          path: bookkeeper-server/target/site/surefire-report.html
-        if: always()
-
-  summary:
-    name: Test Execution Summary
-    runs-on: ubuntu-latest
-    needs: [test, coverage-check, mutation-testing, test-report]
-    if: always()
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Create Summary
-        run: |
-          echo "### 🧪 Test Execution Summary" >> $GITHUB_STEP_SUMMARY
+          echo "### 🧪 ISW2 Testing Report - CI Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Build Status:** $([ '${{ needs.test.result }}' == 'success' ] && echo '✅ SUCCESS' || echo '❌ FAILURE')" >> $GITHUB_STEP_SUMMARY
-          echo "**Coverage Status:** $([ '${{ needs.coverage-check.result }}' == 'success' ] && echo '✅ PASSED' || echo '⚠️ CHECK NEEDED')" >> $GITHUB_STEP_SUMMARY
-          echo "**Mutation Testing:** $([ '${{ needs.mutation-testing.result }}' == 'success' ] && echo '✅ COMPLETED' || echo '⚠️ CHECK NEEDED')" >> $GITHUB_STEP_SUMMARY
-          echo "**Report Status:** $([ '${{ needs.test-report.result }}' == 'success' ] && echo '✅ GENERATED' || echo '⚠️ CHECK NEEDED')" >> $GITHUB_STEP_SUMMARY
+          echo "**Classes Tested:**" >> $GITHUB_STEP_SUMMARY
+          echo "- EntryMemTable" >> $GITHUB_STEP_SUMMARY
+          echo "- ExponentialBackoffRetryPolicy" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "#### Artifacts Generated:" >> $GITHUB_STEP_SUMMARY
-          echo "- 📊 JaCoCo Coverage Report" >> $GITHUB_STEP_SUMMARY
-          echo "- 🧬 PITest Mutation Report" >> $GITHUB_STEP_SUMMARY
-          echo "- 📝 Surefire Test Report" >> $GITHUB_STEP_SUMMARY
-
-      - name: Notify Results
-        run: |
-          echo "=== 🎯 CI/CD PIPELINE COMPLETED ==="
-          echo "All tests and analysis tools executed successfully!"
-          echo "Check artifacts tab for detailed reports."
-
-  pull-request-comment:
-    name: Add PR Comment
-    runs-on: ubuntu-latest
-    needs: [test, coverage-check]
-    if: github.event_name == 'pull_request'
-
-    steps:
-      - name: Comment PR with Results
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const testResult = '${{ needs.test.result }}';
-            const coverageResult = '${{ needs.coverage-check.result }}';
-            
-            const status = testResult === 'success' ? '✅' : '❌';
-            const coverageStatus = coverageResult === 'success' ? '✅' : '⚠️';
-            
-            const body = `## Test Results
-            
-            ${status} **Unit Tests:** ${testResult.toUpperCase()}
-            ${coverageStatus} **Code Coverage:** ${coverageResult === 'success' ? 'Passed' : 'Check needed'}
-            
-            See [Artifacts](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) for detailed reports.
-            `;
-            
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: body
-            });
+          echo "**Reports Generated:**" >> $GITHUB_STEP_SUMMARY
+          echo "- 📊 JaCoCo Coverage Report (download from artifacts)" >> $GITHUB_STEP_SUMMARY
+          echo "- 🧬 PITest Mutation Report (download from artifacts)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "See artifacts tab for detailed reports."

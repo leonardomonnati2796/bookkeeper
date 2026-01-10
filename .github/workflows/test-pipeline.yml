@@ -22,16 +22,15 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Build bookkeeper-server module
+      - name: Build parent and dependencies
         run: |
-          cd bookkeeper-server
-          mvn clean compile test-compile -DskipTests -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true -Dspotbugs.skip=true -Drat.skip=true
+          mvn clean install -DskipTests -Dcheckstyle.skip=true -Dspotbugs.skip=true -Drat.skip=true -Dmaven.javadoc.skip=true -Dskip-native-modules=true -pl bookkeeper-common,bookkeeper-common-allocator,bookkeeper-proto,circe-checksum,cpu-affinity,bookkeeper-server -am
         continue-on-error: false
 
       - name: Run Specific Tests
         run: |
           cd bookkeeper-server
-          mvn test -Dtest=EntryMemTableManualTest,EntryMemTableLLMTest,ExponentialBackoffRetryPolicyManualTest,ExponentialBackoffRetryPolicyLLMTest -DfailIfNoTests=false
+          mvn surefire:test -Dtest=EntryMemTableManualTest,EntryMemTableLLMTest,ExponentialBackoffRetryPolicyManualTest,ExponentialBackoffRetryPolicyLLMTest -DfailIfNoTests=false
         continue-on-error: true
 
       - name: Generate JaCoCo Coverage Report

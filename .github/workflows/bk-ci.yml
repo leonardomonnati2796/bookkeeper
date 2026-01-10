@@ -111,10 +111,10 @@ jobs:
             module: bookkeeper-server
             flag: bookie
             test_args: "-Dtest='org.apache.bookkeeper.bookie.**'"
-            - step_name: ZooKeeper Tests
-              module: bookkeeper-server
-              flag: zookeeper
-              test_args: "-Dtest='org.apache.bookkeeper.zookeeper.**'"
+          - step_name: ZooKeeper Tests
+            module: bookkeeper-server
+            flag: zookeeper
+            test_args: "-Dtest='org.apache.bookkeeper.zookeeper.**'"
           - step_name: StreamStorage Tests
             test_args: "-f stream/pom.xml -DstreamTests"
             flag: stream
@@ -175,6 +175,7 @@ jobs:
         with:
           report_paths: 'surefire-reports/TEST-*.xml'
           annotate_only: 'true'
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Surefire reports
         uses: actions/upload-artifact@v4
@@ -244,7 +245,7 @@ jobs:
 
       - name: Run all integration tests (except backward compatibility tests)
         run: |
-          mvn -B -nsu -f tests/pom.xml test -DintegrationTests -DredirectTestOutputToFile=false -DtestRetryCount=0
+          mvn -B -nsu -f tests/pom.xml test -DintegrationTests -pl '!scripts' -DredirectTestOutputToFile=false -DtestRetryCount=0
 
       - name: print JVM thread dumps when cancelled
         if: cancelled()
@@ -271,6 +272,7 @@ jobs:
         with:
           report_paths: 'surefire-reports/TEST-*.xml'
           annotate_only: 'true'
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Surefire reports
         uses: actions/upload-artifact@v4
@@ -354,6 +356,7 @@ jobs:
         with:
           report_paths: 'surefire-reports/TEST-*.xml'
           annotate_only: 'true'
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Surefire reports
         uses: actions/upload-artifact@v4
@@ -567,6 +570,7 @@ jobs:
         with:
           report_paths: 'surefire-reports/TEST-*.xml'
           annotate_only: 'true'
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload test reports
         uses: actions/upload-artifact@v4

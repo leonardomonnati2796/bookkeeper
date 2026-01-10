@@ -64,12 +64,15 @@ class EntryMemTableManualTest {
     @Test
     @DisplayName("Add single entry")
     void testAddSingleEntry() throws Exception {
+        // Test base: verifica che l'aggiunta di una singola entry funzioni
         long ledgerId = 1L;
         long entryId = 0L;
         ByteBuf data = Unpooled.wrappedBuffer("test-data".getBytes());
         
+        // Aggiungo l'entry e verifico che la dimensione sia positiva
         long bytesAdded = memTable.addEntry(ledgerId, entryId, data.nioBuffer(), null);
         
+        // Deve ritornare almeno 0 (successo)
         assertTrue(bytesAdded >= 0);
         data.release();
     }
@@ -79,12 +82,14 @@ class EntryMemTableManualTest {
     void testAddMultipleEntriesAndSnapshot() throws Exception {
         long ledgerId = 2L;
         
+        // Popolo la tabella con 10 entry sequenziali
         for (int i = 0; i < 10; i++) {
             ByteBuf data = Unpooled.wrappedBuffer(("entry-" + i).getBytes());
             memTable.addEntry(ledgerId, i, data.nioBuffer(), null);
             data.release();
         }
         
+        // Creo uno snapshot per checkpoint e verifico che non sia null
         Checkpoint cp = memTable.snapshot();
         assertNotNull(cp, "Checkpoint should not be null");
     }
@@ -95,14 +100,17 @@ class EntryMemTableManualTest {
         long ledgerId = 999L;
         long entryId = 1L;
         
+        // Preparo un payload grande (1MB) per testare il boundary
         byte[] largeData = new byte[1024 * 1024]; // 1MB
         for (int i = 0; i < largeData.length; i++) {
             largeData[i] = (byte) (i % 256);
         }
         
         ByteBuf data = Unpooled.wrappedBuffer(largeData);
+        // Tento di inserire l'entry grande
         long bytesAdded = memTable.addEntry(ledgerId, entryId, data.nioBuffer(), null);
         
+        // Verifico che l'inserimento abbia avuto successo
         assertTrue(bytesAdded > 0, "Size should reflect added entry");
         data.release();
     }

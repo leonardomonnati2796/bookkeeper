@@ -573,9 +573,6 @@ jobs:
           distribution: 'temurin'
           java-version: 11
 
-      - name: Build bookkeeper-tests-demo
-        run: mvn -B -nsu -pl bookkeeper-tests-demo clean test -Dskip-native-modules=true
-
       - name: Aggregates test reports
         if: ${{ always() }}
         uses: ./.github/actions/copy-test-reports

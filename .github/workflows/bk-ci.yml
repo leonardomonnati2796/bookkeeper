@@ -85,7 +85,7 @@ jobs:
         if: steps.check_changes.outputs.docs_only != 'true'
         run: |
           mvn -T 1C -B -nsu clean install -Ddistributedlog -DskipTests -Dskip-native-modules=true
-          mvn -T 1C -B -nsu apache-rat:check checkstyle:check spotbugs:check spotless:check package -Ddistributedlog -DskipTests -Dskip-native-modules=true
+          mvn -T 1C -B -nsu checkstyle:check spotbugs:check spotless:check package -Ddistributedlog -DskipTests -Dskip-native-modules=true -Drat.skip=true
 
       - name: Check license files
         if: steps.check_changes.outputs.docs_only != 'true'

@@ -103,7 +103,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: ${{ matrix.timeout || 60 }}
     needs: [ 'build-and-license-check' ]
-    if: ${{ needs.build-and-license-check.outputs.docs_only != 'true' }}
     strategy:
       fail-fast: false
       matrix:
@@ -211,7 +210,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 75
     needs: [ 'build-and-license-check' ]
-    if: ${{ needs.build-and-license-check.outputs.docs_only != 'true' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -305,7 +303,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 75
     needs: [ 'build-and-license-check' ]
-    if: ${{ needs.build-and-license-check.outputs.docs_only != 'true' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -389,7 +386,6 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 30
     needs: [ 'build-and-license-check' ]
-    if: ${{ needs.build-and-license-check.outputs.docs_only != 'true' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -424,7 +420,6 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 30
     needs: [ 'build-and-license-check' ]
-    if: ${{ needs.build-and-license-check.outputs.docs_only != 'true' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -456,7 +451,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: ${{ matrix.timeout || 60 }}
     needs: [ 'build-and-license-check' ]
-    if: ${{ needs.build-and-license-check.outputs.docs_only != 'true' }}
     strategy:
       fail-fast: false
       matrix:
@@ -559,7 +553,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: [ 'build-and-license-check' ]
-    if: ${{ needs.build-and-license-check.outputs.docs_only != 'true' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -641,7 +634,6 @@ jobs:
             exit 1
           fi
       - name: Check that other required jobs were completed successfully
-        if: ${{ needs.build-and-license-check.outputs.docs_only != 'true' }}
         run: |
           ok() { [[ "$1" == "success" || "$1" == "skipped" || "$1" == "cancelled" ]]; }
 

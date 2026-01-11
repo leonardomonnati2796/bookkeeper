@@ -40,14 +40,14 @@ jobs:
         continue-on-error: true
 
       - name: Upload JaCoCo Report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: jacoco-coverage-report
           path: bookkeeper-server/target/site/jacoco/
         if: always()
 
       - name: Upload JaCoCo Report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: jacoco-coverage-report
           path: bookkeeper-server/target/site/jacoco/
@@ -60,7 +60,7 @@ jobs:
         continue-on-error: true
 
       - name: Upload PITest Report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: pitest-mutation-report
           path: bookkeeper-server/target/pit-reports/

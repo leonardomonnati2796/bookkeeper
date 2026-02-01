@@ -1555,9 +1555,7 @@
         <module>shaded</module>
         <module>microbenchmarks</module>
         <module>bookkeeper-slogger</module>
-        <module>tests</module>
         <!-- native-io and cpu-affinity excluded -->
-        <module>testtools</module>
       </modules>
     </profile>
   </profiles>
